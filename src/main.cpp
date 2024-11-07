@@ -16,17 +16,29 @@
 #define M4_HLA PA7
 #define M4_HLB PA6
 
+#define PPM_INT PB5
+#define PPM_CH 8
+
 #include <Arduino.h>
+#include "PPMReader.h"
 
 bool decodePacket(String packet);
 void updateControl();
 void stopMotors();
 void controlMecanumWheels(int throttle, int yaw, int roll, int pitch);
+void update_ppm();
+
+
 
 int throttle = 0, yaw = 0, roll = 0, pitch = 0;  // 제어 입력 변수
 String buffer = "";  // 시리얼로 들어오는 패킷을 버퍼에 저장
-unsigned long lastPacketTime = 0;  // 마지막 패킷 수신 시간을 기록
+unsigned long lastConnTime = 0;  // 마지막 패킷 수신 시간을 기록
 
+PPMReader ppm(PPM_INT, PPM_CH);
+unsigned A=0, E=0, T=0, R=0, U1=0, U2=0, U3=0, U4=0, conn=0, armed=0, mode=0;
+
+unsigned long timer_10Hz = 0;
+unsigned long timer_100Hz = 0;
 
 
 
@@ -50,12 +62,12 @@ void setup()
 
 void loop()
 {
-    // 1. 시리얼 데이터가 있는지 확인
+    // 1. 시리얼 명령 수신 시나리오
     while (Serial.available()) {
         char receivedChar = Serial.read();  // 한 글자씩 읽기
         if (receivedChar == '#') {  // 패킷 종료 문자 확인
             if (decodePacket(buffer)) {   // 패킷 디코딩 성공 시 true 반환
-                lastPacketTime = millis();  // 마지막 패킷 수신 시간 갱신
+                lastConnTime = millis();  // 마지막 패킷 수신 시간 갱신
                 updateControl();    // 제어 입력 업데이트
             }
             buffer = "";  // 패킷 초기화
@@ -65,15 +77,74 @@ void loop()
         }
     }
 
-    // // 2. 패킷이 수신된 지 1초가 넘었으면 모터 정지
-    // if (millis() - lastPacketTime > 1000) {
-    //     stopMotors();
-    // }
+    // 1.2 조종기 연결 시나리오
+    if (millis() - timer_100Hz >= 10) {
+        timer_10Hz = millis();
+        lastConnTime = millis();
+        
+        update_ppm();
+        updateControl();
+    }
+
+    // 2. 패킷이 수신된 지 1초가 넘었으면 모터 정지
+    if (millis() - lastConnTime > 1000) {
+        stopMotors();
+    }
 }
 
 
 
 
+
+void update_ppm() {
+    A = ppm.latestValidChannelValue(1, 0);
+    E = ppm.latestValidChannelValue(2, 0);
+    T = ppm.latestValidChannelValue(3, 0);
+    R = ppm.latestValidChannelValue(4, 0);
+    U1 = ppm.latestValidChannelValue(5, 0);
+    U2 = ppm.latestValidChannelValue(6, 0);
+    U3 = ppm.latestValidChannelValue(7, 0);
+    U4 = ppm.latestValidChannelValue(8, 0);
+    if (T == 0) {
+        conn = 0;
+    } else {
+        conn = 1;
+    }
+
+    Serial.print(T);
+    Serial.print("\t");
+    Serial.print(R);
+    Serial.print("\t");
+    Serial.print(E);
+    Serial.print("\t");
+    Serial.print(A);
+    Serial.print("\t");
+    Serial.println();
+
+    // if (conn == 1) {
+    //     r_tar = map(A, 1000, 2000, -20, 20);
+    //     p_tar = map(E, 1000, 2000, -20, 20);
+    //     y_tar = map(R, 1000, 2000, -20, 20);
+    //     mode = map(U1, 1000, 2000, 3, 1);
+    //     if (U3 < 1500) {
+    //         armed = 1;
+    //     } else {
+    //         armed = 0;
+    //     }
+    // } else {
+    //     r_tar = 0;
+    //     p_tar = 0;
+    //     y_tar = y_cur;
+    //     mode = 0;
+    //     armed = 0;
+    // }
+    
+    // 파싱한 값 할당
+    throttle = map(T, 1000, 2000, -127, 127);
+    yaw      = map(R, 1000, 2000, -127, 127);
+    roll     = map(E, 1000, 2000, -127, 127);
+    pitch    = map(A, 1000, 2000, -127, 127);
+}
 
 /**
  * 패킷을 디코딩하여 throttle, yaw, roll, pitch 값으로 변환합니다.
