@@ -7,6 +7,15 @@
 #define M4_DIR PB1
 #define M4_PWM PB0
 
+#define M1_HLA PA15
+#define M1_HLB PB3
+#define M2_HLA PB7
+#define M2_HLB PB6
+#define M3_HLA PA0
+#define M3_HLB PA1
+#define M4_HLA PA7
+#define M4_HLB PA6
+
 #include <Arduino.h>
 
 bool decodePacket(String packet);
@@ -17,6 +26,9 @@ void controlMecanumWheels(int throttle, int yaw, int roll, int pitch);
 int throttle = 0, yaw = 0, roll = 0, pitch = 0;  // 제어 입력 변수
 String buffer = "";  // 시리얼로 들어오는 패킷을 버퍼에 저장
 unsigned long lastPacketTime = 0;  // 마지막 패킷 수신 시간을 기록
+
+
+
 
 
 void setup()
