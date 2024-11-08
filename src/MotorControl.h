@@ -96,7 +96,7 @@ void updateMotor() {
     derivative = error - motor1.previousError;
     motor1.outputPWM = motor1.kp * error + motor1.ki * motor1.integral + motor1.kd * derivative;
     motor1.outputPWM = constrain(abs(motor1.outputPWM), 0, 255);
-    digitalWrite(M1_DIR, motor1.targetSpeed >= 0 ? LOW : HIGH);
+    digitalWrite(M1_DIR, error >= 0 ? LOW : HIGH);
     analogWrite(M1_PWM, motor1.outputPWM);
     motor1.previousError = error;
 
@@ -106,7 +106,7 @@ void updateMotor() {
     derivative = error - motor2.previousError;
     motor2.outputPWM = motor2.kp * error + motor2.ki * motor2.integral + motor2.kd * derivative;
     motor2.outputPWM = constrain(abs(motor2.outputPWM), 0, 255);
-    digitalWrite(M2_DIR, motor2.targetSpeed >= 0 ? LOW : HIGH);
+    digitalWrite(M2_DIR, error >= 0 ? LOW : HIGH);
     analogWrite(M2_PWM, motor2.outputPWM);
     motor2.previousError = error;
 
@@ -116,7 +116,7 @@ void updateMotor() {
     derivative = error - motor3.previousError;
     motor3.outputPWM = motor3.kp * error + motor3.ki * motor3.integral + motor3.kd * derivative;
     motor3.outputPWM = constrain(abs(motor3.outputPWM), 0, 255);
-    digitalWrite(M3_DIR, motor3.targetSpeed >= 0 ? HIGH : LOW);
+    digitalWrite(M3_DIR, error >= 0 ? HIGH : LOW);
     analogWrite(M3_PWM, motor3.outputPWM);
     motor3.previousError = error;
 
@@ -126,7 +126,7 @@ void updateMotor() {
     derivative = error - motor4.previousError;
     motor4.outputPWM = motor4.kp * error + motor4.ki * motor4.integral + motor4.kd * derivative;
     motor4.outputPWM = constrain(abs(motor4.outputPWM), 0, 255);
-    digitalWrite(M4_DIR, motor4.targetSpeed >= 0 ? HIGH : LOW);
+    digitalWrite(M4_DIR, error >= 0 ? HIGH : LOW);
     analogWrite(M4_PWM, motor4.outputPWM);
     motor4.previousError = error;
 }
