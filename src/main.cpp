@@ -40,6 +40,7 @@ unsigned A=0, E=0, T=0, R=0, U1=0, U2=0, U3=0, U4=0, conn=0;
 
 unsigned long timer_10Hz = 0;
 unsigned long timer_100Hz = 0;
+unsigned long timer_100Hz_encoder = 0;
 
 // QEncoder 객체 생성
 QEncoder encoder1(M1_HLA, M1_HLB);
@@ -114,27 +115,22 @@ void loop()
     //     stopMotors();
     // }
 
-    // 현재 카운트와 에러 카운트를 시리얼 모니터로 출력
-    Serial.print(encoder1.getCount());
-    Serial.print("\t");
-    Serial.print(encoder1.getErrorCount());
-    Serial.print("\t");
-    Serial.print(encoder2.getCount());
-    Serial.print("\t");
-    Serial.print(encoder2.getErrorCount());
-    Serial.print("\t");
-    Serial.print(encoder3.getCount());
-    Serial.print("\t");
-    Serial.print(encoder3.getErrorCount());
-    Serial.print("\t");
-    Serial.print(encoder4.getCount());
-    Serial.print("\t");
-    Serial.print(encoder4.getErrorCount());
-    Serial.print("\t");
+    // 100Hz 주기로 각 엔코더의 속도 업데이트
+    if (millis() - timer_100Hz_encoder >= 10) {
+        timer_100Hz_encoder = millis();
 
-    Serial.println();
+        encoder1.updateSpeed();
+        encoder2.updateSpeed();
+        encoder3.updateSpeed();
+        encoder4.updateSpeed();
 
-    delay(100); // 0.1초 간격으로 출력
+        // 속도 출력
+        Serial.print("Speed 1: "); Serial.print(encoder1.getSpeed()); Serial.print(" count/ms\t");
+        Serial.print("Speed 2: "); Serial.print(encoder2.getSpeed()); Serial.print(" count/ms\t");
+        Serial.print("Speed 3: "); Serial.print(encoder3.getSpeed()); Serial.print(" count/ms\t");
+        Serial.print("Speed 4: "); Serial.print(encoder4.getSpeed()); Serial.print(" count/ms\t");
+        Serial.println();
+    }
 }
 
 

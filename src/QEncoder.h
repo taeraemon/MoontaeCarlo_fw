@@ -1,11 +1,11 @@
-// QEncoder.h
 #pragma once
 #include <Arduino.h>
 
 class QEncoder {
 public:
     QEncoder(uint8_t pinA, uint8_t pinB)
-        : _pinA(pinA), _pinB(pinB), _previousState(0), _count(0), _errorCount(0) {}
+        : _pinA(pinA), _pinB(pinB), _previousState(0), _count(0), _errorCount(0), 
+          _previousCount(0), _lastUpdateTime(0), _speed(0) {}
 
     void init() {
         pinMode(_pinA, INPUT_PULLUP);
@@ -17,7 +17,7 @@ public:
         _previousState = readPins();
     }
 
-    int32_t getCount() {
+    int32_t getCount() const {
         return _count;
     }
 
@@ -27,8 +27,27 @@ public:
         interrupts();
     }
 
-    int32_t getErrorCount() {
+    int32_t getErrorCount() const {
         return _errorCount;
+    }
+
+    float getSpeed() const {
+        return _speed;
+    }
+
+    void updateSpeed() {
+        unsigned long currentTime = millis();
+        if (currentTime - _lastUpdateTime >= 10) { // 100Hz 주기
+            int32_t currentPosition = _count;
+            int32_t positionChange = currentPosition - _previousCount;
+
+            // 속도 계산 (단위: count/ms)
+            _speed = static_cast<float>(positionChange) / (currentTime - _lastUpdateTime);
+
+            // 상태 업데이트
+            _previousCount = currentPosition;
+            _lastUpdateTime = currentTime;
+        }
     }
 
 private:
@@ -37,6 +56,9 @@ private:
     uint8_t _previousState;
     volatile int32_t _count;
     volatile uint32_t _errorCount;
+    int32_t _previousCount;
+    unsigned long _lastUpdateTime;
+    float _speed;
 
     uint8_t readPins() {
         return (digitalRead(_pinA) << 1) | digitalRead(_pinB);
