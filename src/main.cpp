@@ -43,6 +43,7 @@ unsigned long timer_100Hz = 0;
 
 
 
+
 void setup()
 {
     Serial.begin(115200);
@@ -67,7 +68,7 @@ void setup()
 
 void loop()
 {
-    // 1. 시리얼 명령 수신 시나리오
+    // 1.1 시리얼 명령 수신 시나리오
     while (Serial.available()) {
         char receivedChar = Serial.read();  // 한 글자씩 읽기
         if (receivedChar == '#') {  // 패킷 종료 문자 확인
@@ -82,7 +83,13 @@ void loop()
         }
     }
 
-    // // 1.2 조종기 연결 시나리오
+    // // 1.2 패킷이 수신된 지 1초가 넘었으면 모터 정지
+    // if (millis() - lastConnTime > 1000) {
+    //     stopMotors();
+    // }
+
+
+    // // 2.1 조종기 연결 시나리오
     // if (millis() - timer_100Hz >= 10) {
     //     timer_10Hz = millis();
     //     lastConnTime = millis();
@@ -91,8 +98,8 @@ void loop()
     //     updateControl();
     // }
 
-    // // 2. 패킷이 수신된 지 1초가 넘었으면 모터 정지
-    // if (millis() - lastConnTime > 1000) {
+    // 2.2 조종기 연결이 끊기면 모터 정지
+    // if (conn = 0) {
     //     stopMotors();
     // }
 }
@@ -126,24 +133,6 @@ void update_ppm() {
     Serial.print(A);
     Serial.print("\t");
     Serial.println();
-
-    // if (conn == 1) {
-    //     r_tar = map(A, 1000, 2000, -20, 20);
-    //     p_tar = map(E, 1000, 2000, -20, 20);
-    //     y_tar = map(R, 1000, 2000, -20, 20);
-    //     mode = map(U1, 1000, 2000, 3, 1);
-    //     if (U3 < 1500) {
-    //         armed = 1;
-    //     } else {
-    //         armed = 0;
-    //     }
-    // } else {
-    //     r_tar = 0;
-    //     p_tar = 0;
-    //     y_tar = y_cur;
-    //     mode = 0;
-    //     armed = 0;
-    // }
     
     // 파싱한 값 할당
     throttle = map(T, 1000, 2000, -127, 127);
