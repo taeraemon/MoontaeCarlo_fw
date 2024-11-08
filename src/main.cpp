@@ -9,8 +9,8 @@
 
 #define M1_HLA PA15
 #define M1_HLB PB3
-#define M2_HLA PB7
-#define M2_HLB PB6
+#define M2_HLA PB4  // OLD : PB7
+#define M2_HLB PA10 // OLD : PB6
 #define M3_HLA PA0
 #define M3_HLB PA1
 #define M4_HLA PA7
@@ -21,6 +21,7 @@
 
 #include <Arduino.h>
 #include "PPMReader.h"
+#include "QEncoder.h"
 
 bool decodePacket(String packet);
 void updateControl();
@@ -40,6 +41,11 @@ unsigned A=0, E=0, T=0, R=0, U1=0, U2=0, U3=0, U4=0, conn=0;
 unsigned long timer_10Hz = 0;
 unsigned long timer_100Hz = 0;
 
+// QEncoder 객체 생성
+QEncoder encoder1(M1_HLA, M1_HLB);
+QEncoder encoder2(M2_HLA, M2_HLB);
+QEncoder encoder3(M3_HLA, M3_HLB);
+QEncoder encoder4(M4_HLA, M4_HLB);
 
 
 
@@ -60,10 +66,15 @@ void setup()
     digitalWrite(M3_DIR, HIGH); analogWrite(M3_PWM, 0);
     digitalWrite(M4_DIR, HIGH); analogWrite(M4_PWM, 0);
 
-    pinMode(M1_HLA, INPUT);     pinMode(M1_HLB, INPUT);
-    pinMode(M2_HLA, INPUT);     pinMode(M2_HLB, INPUT);
-    pinMode(M3_HLA, INPUT);     pinMode(M3_HLB, INPUT);
-    pinMode(M4_HLA, INPUT);     pinMode(M4_HLB, INPUT);
+    pinMode(M1_HLA, INPUT_PULLUP); pinMode(M1_HLB, INPUT_PULLUP);
+    pinMode(M2_HLA, INPUT_PULLUP); pinMode(M2_HLB, INPUT_PULLUP);
+    pinMode(M3_HLA, INPUT_PULLUP); pinMode(M3_HLB, INPUT_PULLUP);
+    pinMode(M4_HLA, INPUT_PULLUP); pinMode(M4_HLB, INPUT_PULLUP);
+
+    encoder1.init(); encoder1.setCount(0);
+    encoder2.init(); encoder2.setCount(0);
+    encoder3.init(); encoder3.setCount(0);
+    encoder4.init(); encoder4.setCount(0);
 }
 
 void loop()
@@ -102,6 +113,28 @@ void loop()
     // if (conn = 0) {
     //     stopMotors();
     // }
+
+    // 현재 카운트와 에러 카운트를 시리얼 모니터로 출력
+    Serial.print(encoder1.getCount());
+    Serial.print("\t");
+    Serial.print(encoder1.getErrorCount());
+    Serial.print("\t");
+    Serial.print(encoder2.getCount());
+    Serial.print("\t");
+    Serial.print(encoder2.getErrorCount());
+    Serial.print("\t");
+    Serial.print(encoder3.getCount());
+    Serial.print("\t");
+    Serial.print(encoder3.getErrorCount());
+    Serial.print("\t");
+    Serial.print(encoder4.getCount());
+    Serial.print("\t");
+    Serial.print(encoder4.getErrorCount());
+    Serial.print("\t");
+
+    Serial.println();
+
+    delay(100); // 0.1초 간격으로 출력
 }
 
 
