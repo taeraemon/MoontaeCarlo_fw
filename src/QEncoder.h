@@ -1,3 +1,16 @@
+/**
+ * QEncoder.h
+ * 
+ * 원본 소스 코드 출처: https://blog.naver.com/alexpark0922/221638739710
+ * 해당 링크의 코드에 위치 추적 및 에러 카운트 기능이 포함된 엔코더 클래스에 기반.
+ * 
+ * 수정 사항:
+ * 1. 속도 계산 기능 추가: 100Hz 주기로 위치 변화를 기반으로 속도를 계산하도록 수정.
+ * 2. 클래스의 모듈화 개선: updateSpeed(), getSpeed() 메서드 추가.
+ * 
+ * @version Modified by [taeraemon]
+ */
+
 #pragma once
 #include <Arduino.h>
 
