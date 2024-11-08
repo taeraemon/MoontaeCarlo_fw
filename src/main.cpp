@@ -9,10 +9,10 @@
 
 #define M1_HLA PA15
 #define M1_HLB PB3
-#define M2_HLA PB4  // OLD : PB7
-#define M2_HLB PA10 // OLD : PB6
-#define M3_HLA PA0
-#define M3_HLB PA1
+#define M2_HLA PB4  // OLD : PB7 // Cause EXTi duplicate issue
+#define M2_HLB PA10 // OLD : PB6 // Cause EXTi duplicate issue
+#define M3_HLA PA1  // OLD : PA0 // Cause Direction issue
+#define M3_HLB PA0  // OLD : PA1 // Cause Direction issue
 #define M4_HLA PA7
 #define M4_HLB PA6
 
