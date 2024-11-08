@@ -25,7 +25,7 @@
 bool decodePacket(String packet);
 void updateControl();
 void stopMotors();
-void controlMecanumWheels(int throttle, int yaw, int roll, int pitch);
+void controlMecanumWheels(int throttle, int rudder, int elevator, int aileron);
 void update_ppm();
 
 
@@ -35,7 +35,7 @@ String buffer = "";  // 시리얼로 들어오는 패킷을 버퍼에 저장
 unsigned long lastConnTime = 0;  // 마지막 패킷 수신 시간을 기록
 
 PPMReader ppm(PPM_INT, PPM_CH);
-unsigned A=0, E=0, T=0, R=0, U1=0, U2=0, U3=0, U4=0, conn=0, armed=0, mode=0;
+unsigned A=0, E=0, T=0, R=0, U1=0, U2=0, U3=0, U4=0, conn=0;
 
 unsigned long timer_10Hz = 0;
 unsigned long timer_100Hz = 0;
@@ -58,6 +58,11 @@ void setup()
     digitalWrite(M2_DIR, HIGH); analogWrite(M2_PWM, 0);
     digitalWrite(M3_DIR, HIGH); analogWrite(M3_PWM, 0);
     digitalWrite(M4_DIR, HIGH); analogWrite(M4_PWM, 0);
+
+    pinMode(M1_HLA, INPUT);     pinMode(M1_HLB, INPUT);
+    pinMode(M2_HLA, INPUT);     pinMode(M2_HLB, INPUT);
+    pinMode(M3_HLA, INPUT);     pinMode(M3_HLB, INPUT);
+    pinMode(M4_HLA, INPUT);     pinMode(M4_HLB, INPUT);
 }
 
 void loop()
@@ -77,19 +82,19 @@ void loop()
         }
     }
 
-    // 1.2 조종기 연결 시나리오
-    if (millis() - timer_100Hz >= 10) {
-        timer_10Hz = millis();
-        lastConnTime = millis();
+    // // 1.2 조종기 연결 시나리오
+    // if (millis() - timer_100Hz >= 10) {
+    //     timer_10Hz = millis();
+    //     lastConnTime = millis();
         
-        update_ppm();
-        updateControl();
-    }
+    //     update_ppm();
+    //     updateControl();
+    // }
 
-    // 2. 패킷이 수신된 지 1초가 넘었으면 모터 정지
-    if (millis() - lastConnTime > 1000) {
-        stopMotors();
-    }
+    // // 2. 패킷이 수신된 지 1초가 넘었으면 모터 정지
+    // if (millis() - lastConnTime > 1000) {
+    //     stopMotors();
+    // }
 }
 
 
@@ -107,7 +112,8 @@ void update_ppm() {
     U4 = ppm.latestValidChannelValue(8, 0);
     if (T == 0) {
         conn = 0;
-    } else {
+    }
+    else {
         conn = 1;
     }
 
@@ -200,26 +206,80 @@ void stopMotors() {
     analogWrite(M3_PWM, 0); analogWrite(M4_PWM, 0);
 }
 
+//    ↑A-----B↑
+//     |  ↑  |
+//     |  |  |
+//    ↑C-----D↑
+
+//    ↓A-----B↓
+//     |  |  |
+//     |  ↓  |
+//    ↓C-----D↓
+
+//    =A-----B↑
+//     |   ↖ |
+//     | ↖   |
+//    ↑C-----D=
+
+//    ↓A-----B↑
+//     |  ←  |
+//     |  ←  |
+//    ↑C-----D↓
+
+//    ↓A-----B=
+//     | ↙   |
+//     |   ↙ |
+//    =C-----D↓
+
+//    ↑A-----B=
+//     | ↗   |
+//     |   ↗ |
+//    =C-----D↑
+
+//    ↑A-----B↓
+//     |  →  |
+//     |  →  |
+//    ↓C-----D↑
+
+//    =A-----B↓
+//     |   ↘ |
+//     | ↘   |
+//    ↓C-----D=
+
+//    ↑A-----B↓
+//     | ↗ ↘ |
+//     | ↖ ↙ |
+//    ↑C-----D↓
+
+//    ↓A-----B↑
+//     | ↙ ↖ |
+//     | ↘ ↗ |
+//    ↓C-----D↑
+
+//    =A-----B=
+//     |  =  |
+//     |  =  |
+//    =C-----D=
+
 /**
  * controlMecanumWheels
  * 
- * 이 함수는 메카넘 휠 로봇의 4개의 모터를 throttle, yaw, roll, pitch 
+ * 이 함수는 메카넘 휠 로봇의 4개의 모터를 rudder, elevator, aileron
  * 입력 값에 따라 제어합니다. 각 입력 값은 -127에서 127 사이의 정수로
  * 가정하며, PWM 범위인 0~255로 매핑하여 모터에 전달합니다.
  *
- * @param throttle 전후 방향 이동을 위한 속도 제어 값 (-127 ~ 127)
- * @param yaw 로봇의 회전을 제어하는 값 (-127 ~ 127, 시계/반시계방향)
- * @param roll 좌우 방향 이동을 위한 속도 제어 값 (-127 ~ 127)
- * @param pitch 상하 방향 이동을 위한 속도 제어 값 (-127 ~ 127)
+ * @param throttle 사용하지 않음
+ * @param rudder 제자리 회전을 제어하는 값 (-127 ~ 127, 시계/반시계 방향)
+ * @param elevator 전후 방향 평행 이동을 위한 속도 제어 값 (-127 ~ 127)
+ * @param aileron 좌우 방향 평행 이동을 위한 속도 제어 값 (-127 ~ 127)
  */
-void controlMecanumWheels(int throttle, int yaw, int roll, int pitch) {
+void controlMecanumWheels(int throttle, int rudder, int elevator, int aileron) {
     // 각 모터 속도 계산
-    // V1: Front-Left, V2: Front-Right, V3: Back-Left, V4: Back-Right
-    // 입력 값의 조합을 통해 각 모터의 최종 속도를 결정
-    int V1 = throttle + yaw + roll + pitch;
-    int V2 = throttle - yaw - roll + pitch;
-    int V3 = throttle + yaw - roll - pitch;
-    int V4 = throttle - yaw + roll - pitch;
+    // V1: Bottom-Right, V2: Bottom-Left, V3: Top-Left, V4: Top-Right
+    int V1 = elevator + aileron - rudder; // Bottom-Right
+    int V2 = elevator - aileron + rudder; // Bottom-Left
+    int V3 = elevator + aileron + rudder; // Top-Left
+    int V4 = elevator - aileron - rudder; // Top-Right
 
     // 속도 정규화 과정 (PWM의 0~255 범위에 맞춰 조정)
     // 각 모터 속도는 절대값이 127을 넘지 않도록 조절되었으므로 추가적인 정규화가 불필요.
