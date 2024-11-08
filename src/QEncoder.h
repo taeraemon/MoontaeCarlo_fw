@@ -99,3 +99,9 @@ private:
         _previousState = newState;
     }
 };
+
+// QEncoder 객체 생성
+QEncoder encoder1(M1_HLA, M1_HLB);
+QEncoder encoder2(M2_HLA, M2_HLB);
+QEncoder encoder3(M3_HLA, M3_HLB);
+QEncoder encoder4(M4_HLA, M4_HLB);
