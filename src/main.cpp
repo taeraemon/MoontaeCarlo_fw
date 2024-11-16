@@ -5,12 +5,6 @@
 #include "MotorControl.h"
 
 bool decodePacket(String packet);
-void updateControl();
-void stopMotors();
-void controlMecanumWheels(int throttle, int rudder, int elevator, int aileron);
-void update_ppm();
-void updateMotor();
-
 
 String buffer = "";  // 시리얼로 들어오는 패킷을 버퍼에 저장
 unsigned long lastConnTime = 0;  // 마지막 패킷 수신 시간을 기록
@@ -19,6 +13,7 @@ unsigned long timer_10Hz = 0;
 unsigned long timer_10Hz_log = 0;
 unsigned long timer_100Hz = 0;
 unsigned long timer_100Hz_encoder = 0;
+
 
 
 void setup()
@@ -120,6 +115,8 @@ void loop()
         Serial.println();
     }
 }
+
+
 
 /**
  * 패킷을 디코딩하여 throttle, yaw, roll, pitch 값으로 변환합니다.
