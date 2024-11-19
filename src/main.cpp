@@ -1,8 +1,30 @@
 #include <Arduino.h>
 #include "config.h"
-#include "PPMReader.h"
 #include "QEncoder.h"
 #include "MotorControl.h"
+#include "R8FM.h"
+
+// R8FM 객체 생성 (PPM 핀, 채널 수)
+R8FM receiver(PPM_INT, PPM_CH);
+
+// QEncoder 객체 생성
+QEncoder encoder1(M1_HLA, M1_HLB);
+QEncoder encoder2(M2_HLA, M2_HLB);
+QEncoder encoder3(M3_HLA, M3_HLB);
+QEncoder encoder4(M4_HLA, M4_HLB);
+
+// #define Kp 15
+// #define Ki 3
+// #define Kd 75
+
+#define Kp 15
+#define Ki 0
+#define Kd 75
+// MotorControl 객체 생성
+MotorControl motor1(M1_PWM, M1_DIR, &encoder1, Kp, Ki, Kd, true);
+MotorControl motor2(M2_PWM, M2_DIR, &encoder2, Kp, Ki, Kd, true);
+MotorControl motor3(M3_PWM, M3_DIR, &encoder3, Kp, Ki, Kd, false);
+MotorControl motor4(M4_PWM, M4_DIR, &encoder4, Kp, Ki, Kd, false);
 
 bool decodePacket(String packet);
 
@@ -14,51 +36,44 @@ unsigned long timer_10Hz_log = 0;
 unsigned long timer_100Hz = 0;
 unsigned long timer_100Hz_encoder = 0;
 
+// 입력 값
+int throttle = 0, yaw = 0, roll = 0, pitch = 0;
+
 
 
 void setup()
 {
     Serial.begin(115200);
 
-    pinMode(LED_BUILTIN, OUTPUT);
+    encoder1.init();
+    encoder2.init();
+    encoder3.init();
+    encoder4.init();
 
-    pinMode(M1_DIR, OUTPUT);    pinMode(M1_PWM, OUTPUT);
-    pinMode(M2_DIR, OUTPUT);    pinMode(M2_PWM, OUTPUT);
-    pinMode(M3_DIR, OUTPUT);    pinMode(M3_PWM, OUTPUT);
-    pinMode(M4_DIR, OUTPUT);    pinMode(M4_PWM, OUTPUT);
+    motor1.init();
+    motor2.init();
+    motor3.init();
+    motor4.init();
 
-    digitalWrite(M1_DIR, HIGH); analogWrite(M1_PWM, 0);
-    digitalWrite(M2_DIR, HIGH); analogWrite(M2_PWM, 0);
-    digitalWrite(M3_DIR, HIGH); analogWrite(M3_PWM, 0);
-    digitalWrite(M4_DIR, HIGH); analogWrite(M4_PWM, 0);
-
-    pinMode(M1_HLA, INPUT_PULLUP); pinMode(M1_HLB, INPUT_PULLUP);
-    pinMode(M2_HLA, INPUT_PULLUP); pinMode(M2_HLB, INPUT_PULLUP);
-    pinMode(M3_HLA, INPUT_PULLUP); pinMode(M3_HLB, INPUT_PULLUP);
-    pinMode(M4_HLA, INPUT_PULLUP); pinMode(M4_HLB, INPUT_PULLUP);
-
-    encoder1.init(); encoder1.setCount(0);
-    encoder2.init(); encoder2.setCount(0);
-    encoder3.init(); encoder3.setCount(0);
-    encoder4.init(); encoder4.setCount(0);
+    receiver.init();
 }
 
 void loop()
 {
-    // 1.1 시리얼 명령 수신 시나리오
-    while (Serial.available()) {
-        char receivedChar = Serial.read();  // 한 글자씩 읽기
-        if (receivedChar == '#') {  // 패킷 종료 문자 확인
-            if (decodePacket(buffer)) {   // 패킷 디코딩 성공 시 true 반환
-                lastConnTime = millis();  // 마지막 패킷 수신 시간 갱신
-                updateControl();    // 제어 입력 업데이트
-            }
-            buffer = "";  // 패킷 초기화
-        }
-        else {
-            buffer += receivedChar;  // #이 아닌 경우 버퍼에 문자 추가
-        }
-    }
+    // // 1.1 시리얼 명령 수신 시나리오
+    // while (Serial.available()) {
+    //     char receivedChar = Serial.read();  // 한 글자씩 읽기
+    //     if (receivedChar == '#') {  // 패킷 종료 문자 확인
+    //         if (decodePacket(buffer)) {   // 패킷 디코딩 성공 시 true 반환
+    //             lastConnTime = millis();  // 마지막 패킷 수신 시간 갱신
+    //             updateControl();    // 제어 입력 업데이트
+    //         }
+    //         buffer = "";  // 패킷 초기화
+    //     }
+    //     else {
+    //         buffer += receivedChar;  // #이 아닌 경우 버퍼에 문자 추가
+    //     }
+    // }
 
     // // 1.2 패킷이 수신된 지 1초가 넘었으면 모터 정지
     // if (millis() - lastConnTime > 1000) {
@@ -71,7 +86,7 @@ void loop()
     //     timer_10Hz = millis();
     //     lastConnTime = millis();
         
-    //     update_ppm();
+    //     update_ppm(&throttle, &yaw, &roll, &pitch);
     //     updateControl();
     // }
 
@@ -79,6 +94,7 @@ void loop()
     // if (conn = 0) {
     //     stopMotors();
     // }
+
 
     // 100Hz 주기로 각 엔코더의 속도 업데이트
     if (millis() - timer_100Hz_encoder >= 10) {
@@ -89,27 +105,41 @@ void loop()
         encoder3.updateSpeed();
         encoder4.updateSpeed();
 
-        updateMotor();
+        receiver.update();
 
-        // 속도 출력
-        // Serial.print("Speed 1: "); Serial.print(encoder1.getSpeed()); Serial.print(" count/ms\t");
-        // Serial.print("Speed 2: "); Serial.print(encoder2.getSpeed()); Serial.print(" count/ms\t");
-        // Serial.print("Speed 3: "); Serial.print(encoder3.getSpeed()); Serial.print(" count/ms\t");
-        // Serial.print("Speed 4: "); Serial.print(encoder4.getSpeed()); Serial.print(" count/ms\t");
-        // Serial.println();
+        if (abs(receiver.getE()) < 5 && abs(receiver.getA()) < 5 && abs(receiver.getR()) < 5 || !receiver.isConnected()) {
+            motor1.stop();
+            motor2.stop();
+            motor3.stop();
+            motor4.stop();
+        }
+        else {
+            int V1 = receiver.getE() + receiver.getA() - receiver.getR(); // Bottom-Right
+            int V2 = receiver.getE() - receiver.getA() + receiver.getR(); // Bottom-Left
+            int V3 = receiver.getE() + receiver.getA() + receiver.getR(); // Top-Left
+            int V4 = receiver.getE() - receiver.getA() - receiver.getR(); // Top-Right
+
+            // 목표 속도 설정
+            motor1.setTargetSpeed(V1 / 5.0);
+            motor2.setTargetSpeed(V2 / 5.0);
+            motor3.setTargetSpeed(V3 / 5.0);
+            motor4.setTargetSpeed(V4 / 5.0);
+
+            motor1.update();
+            motor2.update();
+            motor3.update();
+            motor4.update();
+        }
     }
 
-    if (millis() - timer_10Hz_log >= 100) {
+    if (millis() - timer_10Hz_log >= 10) {
         timer_10Hz_log = millis();
 
-
-        Serial.print(encoder1.getSpeed());
+        Serial.print(motor1._targetSpeed);
         Serial.print("\t");
-        Serial.print(motor1.targetSpeed);
+        Serial.print(motor1._currentSpeed);
         Serial.print("\t");
-        Serial.print(motor1.currentSpeed);
-        Serial.print("\t");
-        Serial.print(motor1.outputPWM);
+        Serial.print(motor1._outputPWM);
         Serial.print("\t");
         
         Serial.println();
