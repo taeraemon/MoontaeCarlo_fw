@@ -11,6 +11,8 @@
  * @version Modified by [taeraemon]
  */
 
+#define WINDOW_SIZE 10 // 슬라이딩 윈도우 크기 (100ms / 10ms)
+
 #pragma once
 #include <Arduino.h>
 
@@ -54,8 +56,27 @@ public:
             int32_t currentPosition = _count;
             int32_t positionChange = currentPosition - _previousCount;
 
-            // 속도 계산 (단위: count/ms)
-            _speed = static_cast<float>(positionChange) / (currentTime - _lastUpdateTime);
+            // 현재 측정 속도 계산 (단위: count/10ms)
+            float currentSpeed = static_cast<float>(positionChange);
+
+            // 슬라이딩 윈도우 업데이트
+            _speedBuffer[_bufferIndex] = currentSpeed; // 최신 값을 윈도우에 추가
+            _bufferIndex = (_bufferIndex + 1) % _windowSize; // 순환 버퍼 인덱스 계산
+
+            // 가중 평균 계산
+            float weightedSum = 0;
+            float weightTotal = 0;
+            for (int i = 0; i < _windowSize; i++) {
+                int weight = i + 1; // 가중치: 오래된 데이터보다 최신 데이터가 더 중요
+                int index = (_bufferIndex + i) % _windowSize; // 순환 인덱스 계산
+                weightedSum += weight * _speedBuffer[index];
+                weightTotal += weight;
+            }
+            float weightedSpeed = weightedSum / weightTotal;
+
+            // 저역 필터(LPF) 적용
+            const float alpha = 0.5; // LPF 계수 (0.0 ~ 1.0)
+            _speed = alpha * weightedSpeed + (1 - alpha) * _speed; // 필터링된 속도
 
             // 상태 업데이트
             _previousCount = currentPosition;
@@ -72,6 +93,11 @@ private:
     int32_t _previousCount;
     unsigned long _lastUpdateTime;
     float _speed;
+
+    // 슬라이딩 윈도우 관련 변수
+    static const int _windowSize = 10; // 100ms 슬라이딩 윈도우 (10ms × 10)
+    float _speedBuffer[_windowSize] = {0}; // 속도 데이터를 저장하는 버퍼
+    int _bufferIndex = 0; // 슬라이딩 윈도우의 현재 인덱스
 
     uint8_t readPins() {
         return (digitalRead(_pinA) << 1) | digitalRead(_pinB);
